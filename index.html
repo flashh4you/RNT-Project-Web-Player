@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rabindranath Tagore Project - Melodies</title>
+    
+    <!-- Premium font for modernized look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Montserrat:wght@200;300;400;500&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- CORE STYLES --- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent; 
+        }
+
+        :root {
+            --glass: rgba(255, 255, 255, 0.05); 
+            --glass-active: rgba(255, 255, 255, 0.2); /* Brighter for active state */
+            --glass-rim: 1px solid rgba(255, 255, 255, 0.1);
+            --blur: 15px; 
+            --transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+            --text-color: #f1f5f9;
+        }
+
+        body {
+            background-color: #0b1e2a; 
+            color: var(--text-color);
+            font-family: 'Montserrat', sans-serif;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            cursor: pointer;
+            text-align: center;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Fixed blurred background video */
+        #background-media {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;       
+            height: 100vh;      
+            object-fit: cover;  
+            object-position: center; 
+            z-index: -1;
+            filter: brightness(0.6) blur(10px); 
+            transform: scale(1.05); 
+        }
+
+        /* --- SCREEN VISIBILITY & TRANSITIONS --- */
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity var(--transition), transform var(--transition);
+            z-index: 1;
+        }
+
+        .hidden {
+            opacity: 0;
+            transform: scale(0.95);
+            pointer-events: none;
+        }
+
+        /* --- INTRO SCREEN STYLES --- */
+        #video-cropper {
+            width: 450px; 
+            height: 450px;   
+            max-width: 85vw; 
+            max-height: 85vw;
+            border-radius: 30px; 
+            overflow: hidden;    
+            margin-bottom: 3rem;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #000; 
+        }
+
+        #video-cropper video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        h2.intro-title {
+            font-family: 'Cinzel', serif;
+            font-weight: 600;
+            letter-spacing: 0.15em; 
+            margin-bottom: 10px;
+            font-size: 1.8rem;
+            color: #f8fafc;
+            text-shadow: 0 4px 15px rgba(0,0,0,0.6);
+        }
+
+        .tap-hint {
+            font-size: 0.75rem;
+            font-weight: 300; 
+            opacity: 0.6;
+            letter-spacing: 0.3em; 
+            text-transform: uppercase;
+            animation: pulse 4s infinite ease-in-out;
+            margin-top: 15px;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.2; }
+            50% { opacity: 0.7; }
+            100% { opacity: 0.2; }
+        }
+
+        /* --- MUSIC PLAYER SCREEN --- */
+        #music-screen {
+            flex-direction: column;
+            justify-content: flex-start; 
+            padding-top: 5vh;
+        }
+
+        #music-screen:not(.hidden) #player-container {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        #player-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 500px;
+            padding: 2rem;
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity var(--transition), transform var(--transition);
+        }
+
+        #cover-art-container {
+            width: 280px;
+            height: 280px;
+            border-radius: 30px;
+            background: var(--glass);
+            backdrop-filter: blur(var(--blur));
+            -webkit-backdrop-filter: blur(var(--blur));
+            border: var(--glass-rim);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            overflow: hidden;
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        #cover-art-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: opacity var(--transition);
+        }
+
+        #cover-art-placeholder {
+            position: absolute;
+            color: rgba(255,255,255,0.2);
+            font-size: 1rem;
+            font-weight: 200;
+        }
+
+        h1.track-title-main {
+            font-family: 'Cinzel', serif; 
+            font-size: 2.2rem; 
+            letter-spacing: 0.08em; 
+            color: #f8fafc; 
+            text-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            margin-bottom: 0.5rem;
+        }
+
+        p.composer-sub {
+            font-size: 0.8rem;
+            font-weight: 400;
+            opacity: 0.5;
+            letter-spacing: 0.1em;
+            margin-bottom: 2rem;
+        }
+
+        /* Player Controls */
+        #controls {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+            margin-bottom: 3rem;
+        }
+
+        .control-btn {
+            background: var(--glass);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border: var(--glass-rim);
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            color: rgba(255, 255, 255, 0.6);
+            transition: color var(--transition), transform var(--transition), background var(--transition);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .control-btn:hover {
+            color: rgba(255, 255, 255, 1);
+            background: rgba(255, 255, 255, 0.15);
+            transform: scale(1.05);
+        }
+
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+
+        .control-btn.play-pause {
+            width: 80px;
+            height: 80px;
+            color: #f8fafc;
+        }
+
+        #timeline-container {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 3rem;
+            font-size: 0.7rem;
+            opacity: 0.5;
+            font-weight: 300;
+        }
+
+        #progress-bar {
+            flex-grow: 1;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        #progress-fill {
+            height: 100%;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 2px;
+            width: 0%;
+            transition: width 0.1s linear; 
+        }
+
+        /* --- SCROLLING LIST --- */
+        #playlist-panel {
+            width: 100vw;
+            height: 40vh; 
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            background: rgba(11, 30, 42, 0.6); 
+            backdrop-filter: blur(var(--blur));
+            -webkit-backdrop-filter: blur(var(--blur));
+            border-top: var(--glass-rim);
+            border-radius: 30px 30px 0 0;
+            padding: 1.5rem;
+            padding-bottom: 1rem; /* Adjusted for footer */
+            box-shadow: 0 -20px 40px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+        }
+
+        #playlist-list {
+            list-style: none;
+            overflow-y: scroll; 
+            scrollbar-width: none; 
+            -ms-overflow-style: none;  
+            flex-grow: 1; /* Allows list to take up available space above footer */
+        }
+
+        #playlist-list::-webkit-scrollbar {
+            display: none;
+        }
+
+        .playlist-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            background: var(--glass);
+            border: var(--glass-rim);
+            border-radius: 20px;
+            text-align: left;
+            cursor: pointer;
+            transition: background var(--transition), transform var(--transition), border var(--transition), box-shadow var(--transition);
+        }
+
+        .playlist-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
+
+        /* Upgraded Active Highlight */
+        .playlist-item.active {
+            background: var(--glass-active);
+            border: 1px solid rgba(255, 255, 255, 0.4); /* Stronger border */
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.1); /* Subtle glow */
+            font-weight: 500;
+        }
+
+        .playlist-art-thumb {
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.08);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            font-size: 0.6rem;
+            color: rgba(255,255,255,0.15);
+        }
+
+        .playlist-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+            flex-grow: 1;
+        }
+
+        .item-title {
+            font-size: 0.95rem;
+            color: rgba(255,255,255,0.9);
+        }
+
+        .item-composer {
+            font-size: 0.75rem;
+            font-weight: 300;
+            opacity: 0.5;
+        }
+
+        /* Custom Footer Styling */
+        #dev-footer {
+            margin-top: 15px;
+            font-size: 0.55rem;
+            letter-spacing: 0.15em;
+            color: rgba(255, 255, 255, 0.3);
+            text-transform: uppercase;
+            text-align: center;
+        }
+
+    </style>
+</head>
+<body>
+    <video id="background-media" src="floral-bg.mp4" autoplay loop muted playsinline></video>
+
+    <!-- SCREEN 1: INTRO -->
+    <div id="intro-screen" class="screen">
+        <div id="video-cropper">
+            <video src="RNTintro.mp4" autoplay loop muted playsinline></video>
+        </div>
+        
+        <h2 class="intro-title">Rabindranath Tagore Project</h2>
+        <p class="tap-hint">Tap to Enter Project</p>
+    </div>
+
+    <!-- SCREEN 2: MUSIC PLAYER -->
+    <div id="music-screen" class="screen hidden">
+        <div id="player-container">
+            <div id="cover-art-container">
+                <p id="cover-art-placeholder">[ COVER ART ]</p>
+                <img id="main-cover" src="" alt="Track Cover Art">
+            </div>
+
+            <h1 id="track-title-display" class="track-title-main">Loading...</h1>
+            <p class="composer-sub">Rabindranath Tagore</p>
+
+            <div id="timeline-container">
+                <span id="current-time">0:00</span>
+                <div id="progress-bar">
+                    <div id="progress-fill"></div>
+                </div>
+                <span id="total-duration">--:--</span>
+            </div>
+
+            <div id="controls">
+                <div id="prev-btn" class="control-btn prev">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"/>
+                    </svg>
+                </div>
+                <div id="play-pause-btn" class="control-btn play-pause">
+                    <svg id="play-icon" width="40" height="40" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M8 5v14l11-7z"/>
+                    </svg>
+                    <svg id="pause-icon" width="40" height="40" viewBox="0 0 24 24" fill="currentColor" style="display:none;">
+                        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                    </svg>
+                </div>
+                <div id="next-btn" class="control-btn next">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <div id="playlist-panel">
+            <ul id="playlist-list"></ul>
+            <!-- New Developer Footer -->
+            <div id="dev-footer">in development by OhMyFlash!</div>
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        const songs = [
+            { title: "Tumi Khushi Thako", file: "Tumi Khushi Thako.mp3", cover: "cover.jpg" },
+            { title: "Tomar Khola Hawa", file: "Tomar Khola Hawa.mp3", cover: "cover.jpg" },
+            { title: "Phooley Phooley", file: "Phooley Phooley.mp3", cover: "cover.jpg" },
+            { title: "Orey Grihobashi", file: "Orey Grihobashi.mp3", cover: "cover.jpg" },
+            { title: "Oder Shathe Melao", file: "Oder Shathe Melao.mp3", cover: "cover.jpg" },
+            { title: "Hey Shokha", file: "Hey Shokha.mp3", cover: "cover.jpg" },
+            { title: "Bhalobashi Bhalobashi", file: "Bhalobashi Bhalobashi.mp3", cover: "cover.jpg" }
+        ];
+
+        // --- PLAYLIST LOGIC ---
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        const fixedEndSong = songs.find(s => s.title === "Tumi Khushi Thako");
+        const restOfSongs = songs.filter(s => s.title !== "Tumi Khushi Thako");
+
+        const playlist = shuffleArray(restOfSongs);
+        playlist.push(fixedEndSong); 
+
+        // --- AUDIO STATE ---
+        let currentTrackIndex = 0;
+        let audio = new Audio();
+        let isPlayingState = false;
+        let canEnterPlayer = false; 
+
+        // --- DOM ELEMENTS ---
+        const introScreen = document.getElementById('intro-screen');
+        const musicScreen = document.getElementById('music-screen');
+        const trackTitleMain = document.getElementById('track-title-display');
+        const mainCover = document.getElementById('main-cover');
+        const playlistListDOM = document.getElementById('playlist-list');
+        const playBtn = document.getElementById('play-pause-btn');
+        const playIconDOM = document.getElementById('play-icon');
+        const pauseIconDOM = document.getElementById('pause-icon');
+        const currentTimeDOM = document.getElementById('current-time');
+        const totalDurationDOM = document.getElementById('total-duration');
+        const progressBar = document.getElementById('progress-bar');
+        const progressFill = document.getElementById('progress-fill');
+
+        loadTrack(currentTrackIndex);
+        buildPlaylistDOM();
+
+        document.body.addEventListener('click', () => {
+            if (introScreen.classList.contains('hidden')) return; 
+            
+            introScreen.classList.add('hidden');
+            
+            setTimeout(() => {
+                musicScreen.classList.remove('hidden');
+                audio.src = playlist[currentTrackIndex].file;
+                playTrack(); 
+                canEnterPlayer = true; 
+            }, 1000); 
+        });
+
+        function buildPlaylistDOM() {
+            playlistListDOM.innerHTML = ''; 
+
+            playlist.forEach((song, index) => {
+                const li = document.createElement('li');
+                li.className = 'playlist-item';
+                li.id = `track-${index}`;
+                
+                const thumb = document.createElement('div');
+                thumb.className = 'playlist-art-thumb';
+                thumb.innerText = '[ ART ]';
+                if(song.cover) thumb.innerHTML = `<img src="${song.cover}" alt="track cover thumb">`;
+
+                const info = document.createElement('div');
+                info.className = 'playlist-info';
+                
+                const titleText = document.createElement('span');
+                titleText.className = 'item-title';
+                titleText.innerText = song.title;
+
+                const composerText = document.createElement('span');
+                composerText.className = 'item-composer';
+                composerText.innerText = 'Rabindranath Tagore';
+
+                info.appendChild(titleText);
+                info.appendChild(composerText);
+                li.appendChild(thumb);
+                li.appendChild(info);
+
+                li.addEventListener('click', () => {
+                    if(!canEnterPlayer) return;
+                    
+                    // NEW: If they tap the currently active song, toggle play/pause instead of restarting
+                    if (currentTrackIndex === index) {
+                        if (isPlayingState) pauseTrack();
+                        else playTrack();
+                    } else {
+                        // Otherwise, change to the newly tapped track
+                        currentTrackIndex = index;
+                        audio.src = playlist[currentTrackIndex].file; 
+                        playTrack();
+                    }
+                });
+
+                playlistListDOM.appendChild(li);
+            });
+        }
+
+        function loadTrack(index) {
+            const track = playlist[index];
+            
+            trackTitleMain.innerText = track.title;
+            
+            if(track.cover) {
+                mainCover.style.opacity = 0;
+                setTimeout(() => {
+                    mainCover.src = track.cover;
+                    mainCover.style.opacity = 1;
+                }, 300);
+            } else {
+                mainCover.src = ''; 
+            }
+
+            const prevActive = playlistListDOM.querySelector('.active');
+            if(prevActive) prevActive.classList.remove('active');
+            
+            const newActive = document.getElementById(`track-${index}`);
+            if(newActive) {
+                newActive.classList.add('active');
+                newActive.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        function playTrack() {
+            loadTrack(currentTrackIndex);
+            audio.play().catch(e => console.error("Auto-play failed, manual tap needed.", e));
+            isPlayingState = true;
+            updatePlayPauseIcons();
+        }
+
+        function pauseTrack() {
+            audio.pause();
+            isPlayingState = false;
+            updatePlayPauseIcons();
+        }
+
+        function updatePlayPauseIcons() {
+            if(isPlayingState) {
+                playIconDOM.style.display = 'none';
+                pauseIconDOM.style.display = 'block';
+            } else {
+                playIconDOM.style.display = 'block';
+                pauseIconDOM.style.display = 'none';
+            }
+        }
+
+        playBtn.addEventListener('click', () => {
+            if(!canEnterPlayer) return;
+            if(isPlayingState) pauseTrack();
+            else playTrack();
+        });
+
+        document.getElementById('next-btn').addEventListener('click', nextTrack);
+        document.getElementById('prev-btn').addEventListener('click', prevTrack);
+
+        function nextTrack() {
+            if(!canEnterPlayer) return;
+            currentTrackIndex = (currentTrackIndex + 1) % playlist.length;
+            audio.src = playlist[currentTrackIndex].file; 
+            playTrack();
+        }
+
+        function prevTrack() {
+            if(!canEnterPlayer) return;
+            currentTrackIndex = (currentTrackIndex - 1 + playlist.length) % playlist.length;
+            audio.src = playlist[currentTrackIndex].file; 
+            playTrack();
+        }
+
+        audio.addEventListener('ended', nextTrack);
+
+        audio.addEventListener('timeupdate', () => {
+            const current = audio.currentTime;
+            const total = audio.duration;
+            
+            if(isNaN(total)) return;
+            
+            currentTimeDOM.innerText = formatTime(current);
+            totalDurationDOM.innerText = formatTime(total);
+
+            const progressPercent = (current / total) * 100;
+            progressFill.style.width = `${progressPercent}%`;
+        });
+
+        function formatTime(secs) {
+            const minutes = Math.floor(secs / 60);
+            const seconds = Math.floor(secs % 60);
+            return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+        }
+
+        progressBar.addEventListener('click', (e) => {
+            if(!canEnterPlayer) return;
+            
+            const rect = progressBar.getBoundingClientRect();
+            const clickPositionX = e.clientX - rect.left;
+            const percentage = clickPositionX / rect.width;
+            
+            if(audio.duration) audio.currentTime = percentage * audio.duration;
+        });
+    </script>
+</body>
+</html>
